@@ -1,0 +1,36 @@
+This directory tools for plotting information from transaction logs produced from taskvine applications:
+
+vine_plot_tr.py - produces a plot depicting the tasks executing on each worker.
+
+	Running the program: python vine_plot_tr.py <transaction_log> <title>? <save_file_name>?
+		The title and save_file_name arguments are optional. The title defaults to Worker Info and the plot is not saved on default.
+
+	Extra arguments:
+		'-a' - 'display all info from the transaction log'
+		'-f' - 'flip colors between tasks'
+		'-c' - 'display cache updates'
+		'-r' - 'display resource updates'
+		'-d' - 'display done markers'
+		'-i' - 'display input transfers'
+		'-o' - 'display output transfers'
+		'-s' - 'print stats'
+
+
+vine_plot_manager.py - produces a plot depicting the acummulation of events over time on the manager.
+
+	Running the program: python vine_plot_manager.py <transaction_log> <title>? <save_file_name>?
+		The title and save_file_name arguments are optional. The title defaults to Worker Info and the plot is not saved on default.
+
+
+	Extra arguments:
+		'-a' - 'display all info from the transaction log'
+		'-c' - 'display connections'
+		'-d' - 'display disconnections'
+		'-r' - 'display resource updates'
+		'-u' - 'display cache updates'
+		'-s' - 'display sending tasks'
+		'-w' - 'display notified results'
+		'-m' - 'display marked done'
+		'-i' - 'display input transfers'
+		'-o' - 'display output transfes'
+
