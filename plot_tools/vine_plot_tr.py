@@ -253,9 +253,9 @@ def plot_workers(title='Worker Info', all_info=False, save=None, c_updates=False
     plt.xlabel("time")
     plt.tick_params(axis='both', which='major', labelsize=15)
     plt.legend()
-    plt.show()
     if save:
         plt.savefig(save)
+    plt.show()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Plot worker information from transaction lof file.')

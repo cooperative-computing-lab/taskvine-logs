@@ -98,9 +98,9 @@ def plot_manager(title='Manager Info', all_info=False, save=None, connections=Fa
     plt.ylabel("Percent of each category of Tasks Done")
     plt.xlabel("time")
     plt.legend()
-    plt.show()
     if save:
         plt.savefig(save)
+    plt.show()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Plot worker information from transaction log file.')
