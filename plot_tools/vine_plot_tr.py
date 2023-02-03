@@ -170,7 +170,7 @@ def plot_cache_updates():
     plt.barh(minitask_ys, minitask_widths, left=minitask_lefts, color="red", label='Minitask')
     plt.barh(fetch_ys, fetch_widths, left=fetch_lefts, color="mistyrose", label='Curl URL')
 
-def plot_workers(title='Worker Info', all_info=False, save=None, c_updates=False, flip=False, resources=False, done=False, IT=False, OT=False):
+def plot_workers(title='Worker Info', all_info=False, save=None, c_updates=False, flip=False, resources=False, done=False, IT=False, OT=False, xticks=None, yticks=None):
     count = 0
     done_xs = [] 
     IT_lefts = [] 
@@ -253,6 +253,20 @@ def plot_workers(title='Worker Info', all_info=False, save=None, c_updates=False
     plt.xlabel("time")
     plt.tick_params(axis='both', which='major', labelsize=15)
     plt.legend()
+    if xticks:
+        tick_list = [int(xticks[0])]
+        s = tick_list[0]
+        for x in range(int(xticks[2])):
+            s += int(xticks[1])
+            tick_list.append(s)
+        plt.xticks(tick_list)
+    if yticks:
+        tick_list = [int(yticks[0])]
+        s = tick_list[0]
+        for x in range(int(yticks[2])):
+            s += int(yticks[1])
+            tick_list.append(s)
+        plt.yticks(tick_list)
     if save:
         plt.savefig(save)
     plt.show()
@@ -270,6 +284,8 @@ if __name__ == "__main__":
     parser.add_argument('-i', action='store_true', help='display input transfers')
     parser.add_argument('-o', action='store_true', help='display output transfers')
     parser.add_argument('-s', action='store_true', help='print stats')
+    parser.add_argument('-x', nargs=3, help='change scale for x ticks -x <start> <step_size> <steps>')
+    parser.add_argument('-y', nargs=3, help='change scale for y ticks -y <start> <step_size> <steps>')
     args = parser.parse_args()
     read_log(args.log, args.s)
     plot_workers(title=args.title, 
@@ -280,4 +296,6 @@ if __name__ == "__main__":
                  resources=args.c,
                  done=args.d,
                  IT=args.i,
-                 OT=args.o) 
+                 OT=args.o,
+                 xticks = args.x,
+                 yticks = args.y,) 
