@@ -16,6 +16,7 @@ vine_plot_tr.py - produces a plot depicting the tasks executing on each worker.
 		'-s' - 'print stats'
 		'-x' - 'modify the sacle for the x ticks  -x <start> <step_size> <steps>'
 		'-y' - 'modify the sacle for the y ticks  -y <start> <step_size> <steps>'
+		'-m' - 'use manager start time as plot reference point Default: workers first task'
 
 
 vine_plot_manager.py - produces a plot depicting the acummulation of events over time on the manager.

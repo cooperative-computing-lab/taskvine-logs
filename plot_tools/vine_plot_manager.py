@@ -19,7 +19,7 @@ def read_log(log, print_stats=False):
     filename = log 
     lines = open(log, 'r').read().splitlines()
     for line in lines:
-        if "MANAER START" in line and "#" not in line:
+        if "MANAGER START" in line and "#" not in line:
             sp = line.split()
             time = int(sp[0])/1000000
             manager_info["Start"] = time

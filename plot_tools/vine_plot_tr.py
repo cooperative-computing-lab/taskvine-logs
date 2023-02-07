@@ -5,12 +5,17 @@ import sys
 import argparse
 
 worker_info = {}
-
+manager_start = -1
 def read_log(log, print_stats=False):
     fail_count = 0
     filename = log 
     lines = open(log, 'r').read().splitlines()
     for line in lines:
+        if "MANAGER START" in line and "#" not in line:
+            sp = line.split()
+            time = int(sp[0])/1000000
+            global manager_start
+            manager_start = time
         if "WORKER" in line and "CONNECTION" in line and "#" not in line and "DISCONNECTION" not in line:
             sp = line.split()
             worker_address = sp[4]
@@ -106,20 +111,23 @@ def read_log(log, print_stats=False):
                 "average_time_between_tasks", sum(time_between_tasks)/len(time_between_tasks))
         ###############################
 
-def plot_resource_updates():
+def plot_resource_updates(manager_ref):
     xs = []
     ys = []
     y = 0
     for worker in worker_info:
         y += 1
         for resource_update in worker_info[worker]["resource"]:
-            x = resource_update - worker_info[worker]["first_task"]
+            if manager_ref:
+                x = resource_update - manager_start
+            else:
+                x = resource_update - worker_info[worker]["first_task"]
             if x > 0:
                 xs.append(x)
                 ys.append(y)
     plt.plot(xs , ys, 'm+', label='Resource Updates')
 
-def plot_cache_updates():
+def plot_cache_updates(manager_ref):
     xs = []
     ys = []
     
@@ -142,7 +150,10 @@ def plot_cache_updates():
                     update_time = cache_update[0]
                     if task_info["start"] < update_time and task_info["stop"] > update_time:
                         width = update_time - task_info["start"]
-                        left =  task_info["start"] - worker_info[worker]["first_task"]
+                        if manager_ref:
+                            left =  task_info["start"] - manager_start
+                        else:
+                            left =  task_info["start"] - worker_info[worker]["first_task"]
                         worker_info[worker]["tasks"][task]["start"] = update_time
                         fetch_lefts.append(left)
                         fetch_ys.append(y)
@@ -155,13 +166,19 @@ def plot_cache_updates():
                     update_time = cache_update[0]
                     if task_info["start"] < update_time and task_info["stop"] > update_time:
                         width = update_time - task_info["start"]
-                        left =  task_info["start"] - worker_info[worker]["first_task"]
+                        if manager_ref:
+                            left =  task_info["start"] - manager_start
+                        else:
+                            left =  task_info["start"] - worker_info[worker]["first_task"]
                         worker_info[worker]["tasks"][task]["start"] = update_time
                         minitask_lefts.append(left)
                         minitask_ys.append(y)
                         minitask_widths.append(width)
             else:
-                x = cache_update[0] - worker_info[worker]["first_task"]
+                if manager_ref:
+                    x = cache_update[0] - manager_start
+                else:
+                    x = cache_update[0] - worker_info[worker]["first_task"]
                 if x > 0:
                     xs.append(x)
                     ys.append(y)
@@ -170,7 +187,7 @@ def plot_cache_updates():
     plt.barh(minitask_ys, minitask_widths, left=minitask_lefts, color="red", label='Minitask')
     plt.barh(fetch_ys, fetch_widths, left=fetch_lefts, color="mistyrose", label='Curl URL')
 
-def plot_workers(title='Worker Info', all_info=False, save=None, c_updates=False, flip=False, resources=False, done=False, IT=False, OT=False, xticks=None, yticks=None):
+def plot_workers(title='Worker Info', all_info=False, save=None, c_updates=False, flip=False, resources=False, done=False, IT=False, OT=False, xticks=None, yticks=None, manager_ref=False):
     count = 0
     done_xs = [] 
     IT_lefts = [] 
@@ -188,7 +205,10 @@ def plot_workers(title='Worker Info', all_info=False, save=None, c_updates=False
     lefts2 = []
     # PLOT CACHE UPDATES
     if all_info or c_updates:
-        plot_cache_updates()
+        plot_cache_updates(manager_ref)
+    # PLOT RESOURCES REPORTS
+    if all_info or resources:
+        plot_resource_updates(manager_ref)
     for worker in worker_info:
         count += 1
         if "tasks" in worker_info[worker]:
@@ -203,7 +223,10 @@ def plot_workers(title='Worker Info', all_info=False, save=None, c_updates=False
 
                 # DONE MARKERS
                 if "done" in worker_info[worker]["tasks"][task]:
-                    x = worker_info[worker]["tasks"][task]["done"] - worker_info[worker]["first_task"]
+                    if manager_ref:
+                        x = worker_info[worker]["tasks"][task]["done"] - manager_start
+                    else:
+                        x = worker_info[worker]["tasks"][task]["done"] - worker_info[worker]["first_task"]
                     done_xs.append(x)
                     done_ys.append(count)
  
@@ -211,22 +234,34 @@ def plot_workers(title='Worker Info', all_info=False, save=None, c_updates=False
                 if flip:
                     if t_count%2 == 1:
                         widths.append(worker_info[worker]["tasks"][task]["stop"] - worker_info[worker]["tasks"][task]["start"])
-                        lefts.append(worker_info[worker]["tasks"][task]["start"] - worker_info[worker]["first_task"])
+                        if manager_ref:
+                            lefts.append(worker_info[worker]["tasks"][task]["start"] - manager_start)
+                        else:
+                            lefts.append(worker_info[worker]["tasks"][task]["start"] - worker_info[worker]["first_task"])
                         ys.append(count)
                     else:
                         widths2.append(worker_info[worker]["tasks"][task]["stop"] - worker_info[worker]["tasks"][task]["start"])
-                        lefts2.append(worker_info[worker]["tasks"][task]["start"] - worker_info[worker]["first_task"])
+                        if manager_ref:
+                            lefts2.append(worker_info[worker]["tasks"][task]["start"] - manager_start)
+                        else:
+                            lefts2.append(worker_info[worker]["tasks"][task]["start"] - worker_info[worker]["first_task"])
                         ys2.append(count)
                     t_count += 1
                 else:
                     widths.append(worker_info[worker]["tasks"][task]["stop"] - worker_info[worker]["tasks"][task]["start"])
-                    lefts.append(worker_info[worker]["tasks"][task]["start"] - worker_info[worker]["first_task"])
+                    if manager_ref:
+                        lefts.append(worker_info[worker]["tasks"][task]["start"] - manager_start)
+                    else:
+                        lefts.append(worker_info[worker]["tasks"][task]["start"] - worker_info[worker]["first_task"])
                     ys.append(count)
 
                 # INPUT TRANSFERS
                 if all_info or IT:
                     for I_transfer in worker_info[worker]["tasks"][task]["I_transfer"]:
-                        IT_lefts.append(I_transfer[0] - worker_info[worker]["first_task"])
+                        if manager_ref:
+                            IT_lefts.append(I_transfer[0] - manager_start)
+                        else:
+                            IT_lefts.append(I_transfer[0] - worker_info[worker]["first_task"])
                         IT_ys.append(count)
                         IT_widths.append(I_transfer[1])
                         
@@ -244,10 +279,6 @@ def plot_workers(title='Worker Info', all_info=False, save=None, c_updates=False
     if all_info or IT:
         plt.barh(IT_ys, IT_widths, left=IT_lefts, color="black", label='Input Transfers')
         # plt.plot(IT_xs , IT_ys, 'k+',label='Input Transfers')
-    # PLOT RESOURCES REPORTS
-    if all_info or resources:
-        plot_resource_updates()
-
     plt.title(title)    
     plt.ylabel("Worker Number")
     plt.xlabel("time")
@@ -286,6 +317,7 @@ if __name__ == "__main__":
     parser.add_argument('-s', action='store_true', help='print stats')
     parser.add_argument('-x', nargs=3, help='change scale for x ticks -x <start> <step_size> <steps>')
     parser.add_argument('-y', nargs=3, help='change scale for y ticks -y <start> <step_size> <steps>')
+    parser.add_argument('-m', action='store_true', help='use manager start time as plot reference point Default: workers first task')
     args = parser.parse_args()
     read_log(args.log, args.s)
     plot_workers(title=args.title, 
@@ -293,9 +325,10 @@ if __name__ == "__main__":
                  save=args.save, 
                  flip=args.f, 
                  c_updates=args.c,
-                 resources=args.c,
+                 resources=args.r,
                  done=args.d,
                  IT=args.i,
                  OT=args.o,
                  xticks = args.x,
-                 yticks = args.y,) 
+                 yticks = args.y,
+                 manager_ref = args.m) 
