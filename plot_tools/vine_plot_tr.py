@@ -14,72 +14,58 @@ def read_log(log, print_stats=False):
         if line.startswith("#"):
             continue
 
+        sp = line.split()
+        (time, managerpid, subject, args*) = sp
+        time = int(time)/1000000
+
         if "MANAGER START" in line:
-            sp = line.split()
-            time = int(sp[0])/1000000
             global manager_start
             manager_start = time
         if "WORKER" in line and "CONNECTION" in line and "DISCONNECTION" not in line:
-            sp = line.split()
             worker_address = sp[4]
             worker_id = sp[3]
-            time = int(sp[0])/1000000
             if worker_address not in worker_info:
                 worker_info[worker_address] = {"id":worker_id, "connect time":time, "tasks":{}, "cache_updates":[], "first_task":float('inf'), "resource":[]}
         elif "WORKER" in line and "DISCONNECTION" in line:
             if "FAILURE" in line:
                 fail_count += 1
-            sp = line.split()
             worker_address = sp[4]
             worker_id = sp[3]
-            time = int(sp[0])/1000000
             if worker_address not in worker_info:
                 worker_info[worker_address] = {"id":worker_id, "diconnect time":time, "tasks":{}, "cache_updates":[], "first_task":float('inf'), "resource":[]}
             else:
                 worker_info[worker_address]["diconnect time"] = int(time)/1000000
         elif "WORKER" in line and "RESOURCES" in line:
-            sp = line.split()
             worker_id = sp[3]
-            time = int(sp[0])/1000000
             for worker in worker_info:
                 if worker_id == worker_info[worker]["id"]:
                     worker_id = worker_info[worker]["resource"].append(time)
         elif "CACHE" in line and "(null)" not in line:
-            sp = line.split()
             worker_id = sp[3]
             filename = sp[5]
             wall_time = float(sp[7])/1000000
-            time = int(sp[0])/1000000
             for worker in worker_info:
                 if worker_info[worker]["id"] == worker_id:
                     worker_info[worker]["cache_updates"].append([time, wall_time, filename])
         elif "TASK" in line and "RUNNING" in line:
-            sp = line.split()
             worker_address = sp[5]
             task_num = sp[3]
-            time = int(sp[0])/1000000
             worker_info[worker_address]["tasks"][task_num] = {"start":time, "stop":-1, "I_transfer":[]}
             if time < worker_info[worker_address]["first_task"]:
                 worker_info[worker_address]["first_task"] = time
         elif "TASK" in line and "WAITING_RETRIEVAL" in line:
-            sp = line.split()
             worker_address = sp[5]
             task_num = sp[3]
-            time = int(sp[0])/1000000
             worker_info[worker_address]["tasks"][task_num]["stop"] = time
         elif "TASK" in line and "DONE SUCCESS" in line:
-            sp = line.split()
             task_num = sp[3]
-            time = int(sp[0])/1000000
             for worker in worker_info:
                 if task_num in worker_info[worker]["tasks"]:
                     worker_info[worker]["tasks"][task_num]["done"] = time
     for line in lines:
         if "TRANSFER" in line and "INPUT" in line:
-            sp = line.split()
             task_num = sp[4]
             walltime = float(sp[7])
-            time = int(sp[0])/1000000
             for worker in worker_info:
                 if task_num in worker_info[worker]["tasks"]:
                     worker_info[worker]["tasks"][task_num]["I_transfer"].append([time, walltime])
