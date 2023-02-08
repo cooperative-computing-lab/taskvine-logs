@@ -3,83 +3,80 @@ import matplotlib.pyplot as plt
 import time
 import sys
 import argparse
+import json
 
 worker_info = {}
+worker_of_task = {}
+
 manager_start = -1
+
 def read_log(log, print_stats=False):
     fail_count = 0
-    filename = log 
+    filename = log
     lines = open(log, 'r').read().splitlines()
     for line in lines:
-        if "MANAGER START" in line and "#" not in line:
-            sp = line.split()
-            time = int(sp[0])/1000000
-            global manager_start
-            manager_start = time
-        if "WORKER" in line and "CONNECTION" in line and "#" not in line and "DISCONNECTION" not in line:
-            sp = line.split()
-            worker_address = sp[4]
-            worker_id = sp[3]
-            time = int(sp[0])/1000000
-            if worker_address not in worker_info:
-                worker_info[worker_address] = {"id":worker_id, "connect time":time, "tasks":{}, "cache_updates":[], "first_task":float('inf'), "resource":[]}
-        elif "WORKER" in line and "DISCONNECTION" in line and "#" not in line:
-            if "FAILURE" in line and "#" not in line:
-                fail_count += 1
-            sp = line.split()
-            worker_address = sp[4]
-            worker_id = sp[3]
-            time = int(sp[0])/1000000
-            if worker_address not in worker_info:
-                worker_info[worker_address] = {"id":worker_id, "diconnect time":time, "tasks":{}, "cache_updates":[], "first_task":float('inf'), "resource":[]}
-            else:
-                worker_info[worker_address]["diconnect time"] = int(time)/1000000
-        elif "WORKER" in line and "RESOURCES" in line and "#" not in line:
-            sp = line.split()
-            worker_id = sp[3]
-            time = int(sp[0])/1000000
-            for worker in worker_info:
-                if worker_id == worker_info[worker]["id"]:
-                    worker_id = worker_info[worker]["resource"].append(time)
-        elif "CACHE-UPDATE" in line and "(null)" not in line and "#" not in line:
-            sp = line.split()
-            worker_id = sp[3]
-            filename = sp[5]
-            wall_time = float(sp[7])/1000000
-            time = int(sp[0])/1000000
-            for worker in worker_info:
-                if worker_info[worker]["id"] == worker_id:
-                    worker_info[worker]["cache_updates"].append([time, wall_time, filename])
-        elif "TASK" in line and "RUNNING" in line and "#" not in line:
-            sp = line.split()
-            worker_address = sp[5]
-            task_num = sp[3]
-            time = int(sp[0])/1000000
-            worker_info[worker_address]["tasks"][task_num] = {"start":time, "stop":-1, "I_transfer":[]}
-            if time < worker_info[worker_address]["first_task"]:
-                worker_info[worker_address]["first_task"] = time
-        elif "TASK" in line and "WAITING_RETRIEVAL" in line and "#" not in line:
-            sp = line.split()
-            worker_address = sp[5]
-            task_num = sp[3]
-            time = int(sp[0])/1000000
-            worker_info[worker_address]["tasks"][task_num]["stop"] = time
-        elif "TASK" in line and "DONE SUCCESS" in line and "#" not in line:
-            sp = line.split()
-            task_num = sp[3]
-            time = int(sp[0])/1000000
-            for worker in worker_info:
-                if task_num in worker_info[worker]["tasks"]:
-                    worker_info[worker]["tasks"][task_num]["done"] = time
-    for line in lines:
-        if "TRANSFER" in line and "INPUT" in line and "#" not in line:
-            sp = line.split()
-            task_num = sp[4]
-            walltime = float(sp[7])
-            time = int(sp[0])/1000000
-            for worker in worker_info:
-                if task_num in worker_info[worker]["tasks"]:
-                    worker_info[worker]["tasks"][task_num]["I_transfer"].append([time, walltime])
+        if line.startswith("#"):
+            continue
+
+        try:
+            (time, managerpid, subject, target, event, arg) = line.split(maxsplit=5)
+        except ValueError:
+            continue
+
+        time = int(time)/1000000
+
+        if subject == "MANAGER":
+            managerpid = target
+            if event == "START":
+                global manager_start
+                manager_start = time
+            continue
+
+        if subject == "WORKER":
+            worker_id = target
+            if worker_id == "(null)":
+                continue
+
+            if event == "CONNECTION":
+                worker_address = arg.strip()
+                if worker_id not in worker_info:
+                    worker_info[worker_id] = {"host":worker_address, "connect time":time, "tasks":{}, "cache_updates":[], "first_task":float('inf'), "resources":[]}
+            elif event == "DISCONNECTION":
+                reason = arg.strip()
+                if reason == "FAILURE":
+                    fail_count += 1
+                if worker_id in worker_info:
+                    worker_info[worker_id]["disconnect time"] = time
+            elif event == "RESOURCES":
+                worker_info[worker_id]["resources"].append(time)
+            elif event == "CACHE_UPDATE":
+                (filename, sizeinmb, walltime) = arg.split()
+                worker_info[worker_id]["cache_updates"].append([time, float(walltime)/1000000, filename])
+            elif event == "TRANSFER":
+                (direction, filename, sizeinmb, walltime) = arg.split()
+                worker_info[worker_id]["tasks"][task_num]["I_transfer"].append([time, walltime])
+            continue
+
+        if subject == "TASK":
+            taskid = target
+            if event == "RUNNING":
+                (worker_id, step, resources) = arg.split(maxsplit=2)
+                resources = json.loads(resources)
+                worker_info[worker_id]["tasks"][taskid] = {"start":time, "stop":-1, "I_transfer":[]}
+                worker_of_task[taskid] = worker_id
+                if time < worker_info[worker_id]["first_task"]:
+                    worker_info[worker_id]["first_task"] = time
+            elif event == "WAITING_RETRIEVAL":
+                worker_id = arg.strip()
+                worker_info[worker_id]["tasks"][taskid]["stop"] = time
+            elif event == "DONE":
+                (reason, exit_code, limits, measured) = arg.split(maxsplit=3)
+                limits = json.loads(limits)
+                measured = json.loads(measured)
+                if reason == "SUCCESS":
+                    worker_id = worker_of_task[taskid]
+                    worker_info[worker_id]["tasks"][taskid]["done"] = time
+            continue
 
     if print_stats:
         ####### WORKER STATS ############
@@ -105,9 +102,9 @@ def read_log(log, print_stats=False):
         counts = dict(Counter(task_count))
         for x in counts:
             print("Number of workers: {}, Tasks completed {}".format(counts[x], x))
-            
-        print("average tasks per worker:", sum(task_count)/len(task_count), 
-                "number of workers failed:", fail_count, 
+
+        print("average tasks per worker:", sum(task_count)/len(task_count),
+                "number of workers failed:", fail_count,
                 "average_time_between_tasks", sum(time_between_tasks)/len(time_between_tasks))
         ###############################
 
@@ -117,7 +114,7 @@ def plot_resource_updates(manager_ref):
     y = 0
     for worker in worker_info:
         y += 1
-        for resource_update in worker_info[worker]["resource"]:
+        for resource_update in worker_info[worker]["resources"]:
             if manager_ref:
                 x = resource_update - manager_start
             else:
@@ -130,7 +127,7 @@ def plot_resource_updates(manager_ref):
 def plot_cache_updates(manager_ref):
     xs = []
     ys = []
-    
+
     fetch_lefts=[]
     fetch_ys=[]
     fetch_widths=[]
@@ -189,19 +186,19 @@ def plot_cache_updates(manager_ref):
 
 def plot_workers(title='Worker Info', all_info=False, save=None, c_updates=False, flip=False, resources=False, done=False, IT=False, OT=False, xticks=None, yticks=None, manager_ref=False):
     count = 0
-    done_xs = [] 
-    IT_lefts = [] 
+    done_xs = []
+    IT_lefts = []
     OT_xs = []
-    done_ys = [] 
-    IT_ys = [] 
+    done_ys = []
+    IT_ys = []
     OT_ys = []
     IT_widths = []
 
-    ys = [] 
+    ys = []
     ys2 = []
-    widths= [] 
+    widths= []
     widths2 = []
-    lefts = [] 
+    lefts = []
     lefts2 = []
     # PLOT CACHE UPDATES
     if all_info or c_updates:
@@ -229,8 +226,8 @@ def plot_workers(title='Worker Info', all_info=False, save=None, c_updates=False
                         x = worker_info[worker]["tasks"][task]["done"] - worker_info[worker]["first_task"]
                     done_xs.append(x)
                     done_ys.append(count)
- 
-                # TASKS 
+
+                # TASKS
                 if flip:
                     if t_count%2 == 1:
                         widths.append(worker_info[worker]["tasks"][task]["stop"] - worker_info[worker]["tasks"][task]["start"])
@@ -264,8 +261,7 @@ def plot_workers(title='Worker Info', all_info=False, save=None, c_updates=False
                             IT_lefts.append(I_transfer[0] - worker_info[worker]["first_task"])
                         IT_ys.append(count)
                         IT_widths.append(I_transfer[1])
-                        
-                        
+
     # PLOT TASKS
     if flip:
         plt.barh(ys, widths, left=lefts, color="blue", label='Tasks')
@@ -279,7 +275,7 @@ def plot_workers(title='Worker Info', all_info=False, save=None, c_updates=False
     if all_info or IT:
         plt.barh(IT_ys, IT_widths, left=IT_lefts, color="black", label='Input Transfers')
         # plt.plot(IT_xs , IT_ys, 'k+',label='Input Transfers')
-    plt.title(title)    
+    plt.title(title)
     plt.ylabel("Worker Number")
     plt.xlabel("time")
     plt.tick_params(axis='both', which='major', labelsize=15)
@@ -320,10 +316,10 @@ if __name__ == "__main__":
     parser.add_argument('-m', action='store_true', help='use manager start time as plot reference point Default: workers first task')
     args = parser.parse_args()
     read_log(args.log, args.s)
-    plot_workers(title=args.title, 
-                 all_info=args.a, 
-                 save=args.save, 
-                 flip=args.f, 
+    plot_workers(title=args.title,
+                 all_info=args.a,
+                 save=args.save,
+                 flip=args.f,
                  c_updates=args.c,
                  resources=args.r,
                  done=args.d,
@@ -331,4 +327,4 @@ if __name__ == "__main__":
                  OT=args.o,
                  xticks = args.x,
                  yticks = args.y,
-                 manager_ref = args.m) 
+                 manager_ref = args.m)
