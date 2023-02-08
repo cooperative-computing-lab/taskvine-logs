@@ -41,7 +41,7 @@ def read_log(log, print_stats=False):
             for worker in worker_info:
                 if worker_id == worker_info[worker]["id"]:
                     worker_id = worker_info[worker]["resource"].append(time)
-        elif "CACHE-UPDATE" in line and "(null)" not in line and "#" not in line:
+        elif "CACHE" in line and "(null)" not in line and "#" not in line:
             sp = line.split()
             worker_id = sp[3]
             filename = sp[5]
