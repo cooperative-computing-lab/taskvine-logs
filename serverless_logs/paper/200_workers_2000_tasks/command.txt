@@ -1,0 +1,10 @@
+python3 ex.py --params 100 --iterations 400000 --error 0.0000001 --rate 0.000005
+
+max-workers: 200
+min-workers: 200
+workers-per-cycle: 200
+tasks-per-worker: 2
+timeout: 900 s
+cores: 2.000
+memory: 3000 MB
+disk: 8000 MB
