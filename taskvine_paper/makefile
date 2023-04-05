@@ -28,18 +28,20 @@ workerpeer.png: peer/plot_peer peer/transfer_bigstat_5k_tar
 
 topefttaskview.png: topeft/plot_topeft topeft/topeft
 	topeft/plot_topeft --mode tasks --origin dispatched-first-task --dpi 150 --title " " --legend "lower right" topeft/topeft topefttaskview.png
+	convert -pointsize 60 -annotate +315+1000 "<-Preprocessing" -annotate +650+550 "<-Processing Tasks" -annotate +1100+300 "<-Accumulation Tasks" topefttaskview.png topefttaskview.png
 topeftworkerview.png: topeft/plot_topeft topeft/topeft
 	topeft/plot_topeft --origin dispatched-first-task --dpi 150 --title " " --legend none topeft/topeft topeftworkerview.png
 
 
 colmenataskview.png: colmena/plot_colmena colmena/transactions_peer_enabled
 	colmena/plot_colmena --mode tasks --origin dispatched-first-task --dpi 150 --title " " --legend none colmena/transactions_peer_enabled colmenataskview.png
+	convert -pointsize 60 -annotate +800+950 "<-Simulation Tasks" -annotate +1200+700 "<-Inference Tasks" colmenataskview.png colmenataskview.png
 colmenaworkerview.png: colmena/plot_colmena colmena/transactions_peer_enabled
 	colmena/plot_colmena --origin dispatched-first-task --dpi 150 --title " " --legend none colmena/transactions_peer_enabled colmenaworkerview.png
 
-
 gmotaskview.png: gmo/plot_gmo gmo/transactions
 	gmo/plot_gmo --mode tasks --origin dispatched-first-task --dpi 150 --title " " --legend none gmo/transactions gmotaskview.png
+	convert -pointsize 60 -annotate +300+100 "Library Tasks->" -annotate +525+600 "Function Calls->" gmotaskview.png gmotaskview.png
 gmoworkerview.png: gmo/plot_gmo gmo/transactions
 	gmo/plot_gmo --origin dispatched-first-task --dpi 150 --title " " --legend "lower right" gmo/transactions gmoworkerview.png
 

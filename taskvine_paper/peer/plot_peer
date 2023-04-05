@@ -647,8 +647,17 @@ class TxnPlotTasks(TxnPlot):
             pass
 
         fig.set_ylabel("tasks", fontsize=30)
-        fig.set_yticks([0, len(dt.index)])
-        fig.set_yticklabels(["1", str(len(dt.index)+1)])  # ytick number of workers
+        end = len(dt.index)
+        step = int(end/5)
+        step = (10 * int(step/10))
+        ticks = [0]
+        for x in range(5):
+            ticks.append(ticks[x] + step)
+        ticks[-1] = int(len(dt.index))
+        ticks[0] = ticks[0] + 1
+        fig.set_yticks(ticks)
+        fig.set_yticklabels([str(x) for x in ticks])  # ytick number of workers
+
 
 
 

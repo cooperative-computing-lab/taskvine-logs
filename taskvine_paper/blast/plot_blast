@@ -647,8 +647,15 @@ class TxnPlotTasks(TxnPlot):
             pass
 
         fig.set_ylabel("tasks", fontsize=30)
-        fig.set_yticks([0, len(dt.index)])
-        fig.set_yticklabels(["1", str(len(dt.index)+1)])  # ytick number of workers
+       # fig.set_yticks([0, len(dt.index)])
+        end = len(dt.index)
+        step = int(end/5)
+        ticks = [0]
+        for x in range(5):
+            ticks.append(ticks[x] + step)
+        ticks[0] = ticks[0] + 1
+        fig.set_yticklabels([str(x) for x in ticks])  # ytick number of workers
+       # fig.set_yticklabels(["1", str(len(dt.index)+1)])  # ytick number of workers
 
 
 
@@ -710,9 +717,25 @@ class TxnPlotWorkers(TxnPlot):
             if worker is not None:
                 base_slot = self.plot_by_worker(fig, worker, worker_times, worker_xfers, base_slot)
 
-        fig.set_ylabel("workers", fontsize=30)
-        fig.set_yticks((0, base_slot))
-        fig.set_yticklabels(["0", str(gs.ngroups)])  # ytick number of workers
+        fig.set_ylabel("cores", fontsize=30)
+
+        step = int(int(base_slot)/5)
+        step = (10 * int(step/10))
+        ticks = [0]
+        for x in range(5):
+            ticks.append(ticks[x] + step)
+        ticks[-1] = base_slot
+        fig.set_yticks(ticks)
+
+        step = int(int(gs.ngroups)/5)
+        step = (10 * int(step/10))
+        labels = [0]
+        for x in range(5):
+            labels.append((labels[x] + step))
+        labels[-1] = gs.ngroups
+        labels = [x*4 for x in labels]
+        fig.set_yticklabels(labels)  # ytick number of workers
+
 
         if not self.opts.expand_waiting:
             del self.legend["_tasks waiting at worker"]
