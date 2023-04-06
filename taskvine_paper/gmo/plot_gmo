@@ -429,10 +429,10 @@ class TxnPlot:
                 "_tasks waiting at worker": 'C7',
                 "tasks executing": 'C0',
                 "_tasks lost on disconnection": 'lightcoral',
-                "_results waiting retrieval": 'C8',
+                "results waiting retrieval": 'red',
                 "_tasks failures": 'red',
                 "worker transfers": 'C1',
-                "manager transfers": 'C3',
+                "_manager transfers": 'C3',
                 "_outputs to manager": 'C5',
                 }
 
@@ -595,7 +595,7 @@ class TxnPlotManager(TxnPlot):
         self.line(fig, cu, "end_time", color=self.legend["worker transfers"])
 
         cu = xs[xs["direction"] == "INPUT"][["end_time", "one"]]
-        self.line(fig, cu, "end_time", color=self.legend["manager transfers"])
+        self.line(fig, cu, "end_time", color=self.legend["_manager transfers"])
 
         cu = xs[xs["direction"] == "OUTPUT"][["end_time", "one"]]
         self.line(fig, cu, "end_time", color=self.legend["_outputs to manager"])
@@ -624,7 +624,7 @@ class TxnPlotTasks(TxnPlot):
             pass
 
         cu = at[at["size_input_mgr"] > 0]
-        self.bh(fig, cu.index, cu["time_commit_start"], cu["time_input_mgr"], self.legend["manager transfers"], edgecolor=None)
+        self.bh(fig, cu.index, cu["time_commit_start"], cu["time_input_mgr"], self.legend["_manager transfers"], edgecolor=None)
 
         cu = at[at["size_output_mgr"] > 0]
         self.bh(fig, cu.index, cu["RETRIEVED"]-cu["time_output_mgr"], cu["time_output_mgr"], self.legend["_outputs to manager"], edgecolor=None)
@@ -640,7 +640,7 @@ class TxnPlotTasks(TxnPlot):
 
         self.bh(fig, dt.index, dt["time_worker_start"],  dt["time_worker_end"] - dt["time_worker_start"], self.legend["tasks executing"], edgecolor=None)
 
-        self.bh(fig, dt.index, dt["time_worker_end"],  dt["RETRIEVED"] - dt["time_worker_end"], self.legend["_results waiting retrieval"], edgecolor=None)
+        self.bh(fig, dt.index, dt["time_worker_end"],  dt["RETRIEVED"] - dt["time_worker_end"], self.legend["results waiting retrieval"], edgecolor=None)
 
         try:
             del self.legend["_tasks failures"] # already covered above
@@ -680,7 +680,7 @@ class TxnPlotWorkers(TxnPlot):
         # information from tasks rather than transfer records, as there is only
         # at most one record per task.
         cu = worker[worker["size_input_mgr"] > 0]
-        self.bh(fig, base_slot+1, cu["time_commit_start"], cu["time_input_mgr"], self.legend["manager transfers"])
+        self.bh(fig, base_slot+1, cu["time_commit_start"], cu["time_input_mgr"], self.legend["_manager transfers"])
 
         cu = worker[worker["size_output_mgr"] > 0]
         self.bh(fig, base_slot+1, cu["RETRIEVED"]-cu["time_output_mgr"], cu["time_output_mgr"], self.legend["_outputs to manager"])
@@ -693,7 +693,7 @@ class TxnPlotWorkers(TxnPlot):
 
         self.bh(fig, dt["slot"], dt["time_worker_start"], dt["time_worker_end"]-dt["time_worker_start"], self.legend["tasks executing"])
 
-        self.bh(fig, dt["slot"], dt["time_worker_end"], dt["RETRIEVED"]-dt["time_worker_end"], self.legend["_results waiting retrieval"])
+        self.bh(fig, dt["slot"], dt["time_worker_end"], dt["RETRIEVED"]-dt["time_worker_end"], self.legend["results waiting retrieval"])
 
         ft = dt[(dt["reason"] != "SUCCESS") | ((dt["reason"] == "SUCCESS") & (dt["exit_code"] != 0))]
         self.bh(fig, ft["slot"], ft["RETRIEVED"] - 0.5, 0.5, self.legend["_tasks failures"])
